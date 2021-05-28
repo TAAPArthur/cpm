@@ -1,0 +1,46 @@
+#!/bin/sh -e
+
+umask 077
+PASSWORD_STORE_DIR=${PASSWORD_STORE_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/cpm}
+PASSWORD_CACHE_FILE=${PASSWORD_CACHE_FILE:-/tmp/.cpm/$USER/default}
+
+usage() {
+    echo "$0 show name"
+    echo "$0 insert name"
+    exit $1
+}
+
+if [ -r "$PASSWORD_CACHE_FILE" ]; then
+    CCRYPT_ARGS="-k $PASSWORD_CACHE_FILE"
+fi
+
+case "$1" in
+    lock)
+        rm -f "$PASSWORD_CACHE_FILE"
+        ;;
+    unlock)
+        if [ -t 0 ]; then
+           printf "%s" "${1}"
+           stty -echo
+        fi
+        mkdir -p "$(dirname "$PASSWORD_CACHE_FILE")"
+        cat - > "$PASSWORD_CACHE_FILE"
+        if [ -t 0 ]; then
+            stty echo
+        fi
+        ;;
+    show)
+        [ -e "$PASSWORD_STORE_DIR/$2" ] || usage 2
+        ccrypt -c $CCRYPT_ARGS "$PASSWORD_STORE_DIR/$2"
+        ;;
+    insert)
+        mkdir -p "$PASSWORD_STORE_DIR"
+        ccrypt -e $CCRYPT_ARGS > "$PASSWORD_STORE_DIR/$2"
+        ;;
+    -h|--help|help)
+        usage 0
+        ;;
+    *)
+        usage 2
+        ;;
+esac
