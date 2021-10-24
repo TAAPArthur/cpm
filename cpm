@@ -20,10 +20,10 @@ case "$1" in
         ;;
     unlock)
         if [ -t 0 ]; then
-           printf "%s" "${1}"
            stty -echo
         fi
         mkdir -p "$(dirname "$PASSWORD_CACHE_FILE")"
+        printf "Enter password: "
         cat - > "$PASSWORD_CACHE_FILE"
         if [ -t 0 ]; then
             stty echo
