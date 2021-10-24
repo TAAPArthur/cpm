@@ -47,6 +47,7 @@ case "$1" in
             PASS=$(get_pass)
             printf "%s" "$PASS" | ccrypt "$PASSWORD_STORE_DIR/$2"
             printf "%s" "$PASS" | keyctl padd user "$CPM_MASTER_NAME" @u >/dev/null 2>&1 || true
+            [ -n "$CPM_TIMEOUT" ] && keyctl timeout "$(keyctl request user "$CPM_MASTER_NAME")" "$CPM_TIMEOUT"
         fi
         ;;
     insert)
