@@ -1,9 +1,10 @@
 #!/bin/sh -e
-# shellcheck disable=SC2086
 
 umask 077
 PASSWORD_STORE_DIR=${PASSWORD_STORE_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/cpm}
-PASSWORD_CACHE_FILE=${PASSWORD_CACHE_FILE:-/tmp/.cpm/$USER/default}
+CPM_MASTER_NAME=${CPM_MASTER_NAME:-default}
+CPM_CACHE_DIR=${PASSWORD_CACHE_FILE:-/tmp/.cpm/$USER/}
+CPM_CACHE_FILE="$CPM_CACHE_DIR/$CPM_MASTER_NAME"
 
 usage() {
     echo "$0 show name"
@@ -11,32 +12,50 @@ usage() {
     exit "$1"
 }
 
-if [ -r "$PASSWORD_CACHE_FILE" ]; then
-    CCRYPT_ARGS="-k $PASSWORD_CACHE_FILE"
-fi
+get_pass() {
+    if [ -t 0 ]; then
+       stty -echo
+    fi
+    mkdir -p "$(dirname "$CPM_CACHE_FILE")"
+    printf "Enter password: "
+    cat -
+    if [ -t 0 ]; then
+        stty echo
+    fi
+}
 
 case "$1" in
     lock)
-        rm -f "$PASSWORD_CACHE_FILE"
+        [ -e "$CPM_CACHE_FILE" ] && rm "$CPM_CACHE_FILE"
         ;;
     unlock)
-        if [ -t 0 ]; then
-           stty -echo
-        fi
-        mkdir -p "$(dirname "$PASSWORD_CACHE_FILE")"
-        printf "Enter password: "
-        cat - > "$PASSWORD_CACHE_FILE"
-        if [ -t 0 ]; then
-            stty echo
-        fi
+        get_pass > "$CPM_CACHE_FILE"
+        ;;
+    klock)
+        keyctl purge user "$CPM_MASTER_NAME"
+        ;;
+    kunlock)
+        get_pass | keyctl padd user "$CPM_MASTER_NAME" @u >/dev/null 2>&1
         ;;
     show)
         [ -e "$PASSWORD_STORE_DIR/$2" ] || usage 2
-        ccrypt -c $CCRYPT_ARGS "$PASSWORD_STORE_DIR/$2"
+        if keyctl request user "$CPM_MASTER_NAME" >/dev/null 2>&1 ; then
+            keyctl pipe "$(keyctl request user "$CPM_MASTER_NAME")" | ccrypt "$PASSWORD_STORE_DIR/$2"
+        elif [ -r "$CPM_CACHE_FILE" ]; then
+            ccrypt -c -k "$CPM_CACHE_FILE" "$PASSWORD_STORE_DIR/$2"
+        else
+            PASS=$(get_pass)
+            printf "%s" "$PASS" | ccrypt "$PASSWORD_STORE_DIR/$2"
+            printf "%s" "$PASS" | keyctl padd user "$CPM_MASTER_NAME" @u >/dev/null 2>&1 || true
+        fi
         ;;
     insert)
         mkdir -p "$PASSWORD_STORE_DIR"
-        ccrypt -e $CCRYPT_ARGS > "$PASSWORD_STORE_DIR/$2"
+        if [ -r "$CPM_CACHE_FILE" ]; then
+            ccrypt -e -k "$CPM_CACHE_FILE" > "$PASSWORD_STORE_DIR/$2"
+        else
+            ccrypt -e > "$PASSWORD_STORE_DIR/$2"
+        fi
         ;;
     -h|--help|help)
         usage 0
