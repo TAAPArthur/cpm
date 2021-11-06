@@ -1,7 +1,7 @@
 #!/bin/sh -e
 
 umask 077
-PASSWORD_STORE_DIR=${PASSWORD_STORE_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/cpm}
+CPM_PASSWORD_DIR=${CPM_PASSWORD_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/cpm}
 CPM_MASTER_NAME=${CPM_MASTER_NAME:-default}
 CPM_CACHE_DIR=${PASSWORD_CACHE_FILE:-/tmp/.cpm/$USER/}
 CPM_CACHE_FILE="$CPM_CACHE_DIR/$CPM_MASTER_NAME"
@@ -38,24 +38,24 @@ case "$1" in
         get_pass | keyctl padd user "$CPM_MASTER_NAME" @u >/dev/null 2>&1
         ;;
     show)
-        [ -e "$PASSWORD_STORE_DIR/$2" ] || usage 2
+        [ -e "$CPM_PASSWORD_DIR/$2" ] || usage 2
         if keyctl request user "$CPM_MASTER_NAME" >/dev/null 2>&1 ; then
-            keyctl pipe "$(keyctl request user "$CPM_MASTER_NAME")" | ccrypt "$PASSWORD_STORE_DIR/$2"
+            keyctl pipe "$(keyctl request user "$CPM_MASTER_NAME")" | ccrypt "$CPM_PASSWORD_DIR/$2"
         elif [ -r "$CPM_CACHE_FILE" ]; then
-            ccrypt -c -k "$CPM_CACHE_FILE" "$PASSWORD_STORE_DIR/$2"
+            ccrypt -c -k "$CPM_CACHE_FILE" "$CPM_PASSWORD_DIR/$2"
         else
             PASS=$(get_pass)
-            printf "%s" "$PASS" | ccrypt "$PASSWORD_STORE_DIR/$2"
+            printf "%s" "$PASS" | ccrypt "$CPM_PASSWORD_DIR/$2"
             printf "%s" "$PASS" | keyctl padd user "$CPM_MASTER_NAME" @u >/dev/null 2>&1 || true
             [ -n "$CPM_TIMEOUT" ] && keyctl timeout "$(keyctl request user "$CPM_MASTER_NAME")" "$CPM_TIMEOUT"
         fi
         ;;
     insert)
-        mkdir -p "$PASSWORD_STORE_DIR"
+        [ -d "$CPM_PASSWORD_DIR" ] || mkdir -p "$CPM_PASSWORD_DIR"
         if [ -r "$CPM_CACHE_FILE" ]; then
-            ccrypt -e -k "$CPM_CACHE_FILE" > "$PASSWORD_STORE_DIR/$2"
+            ccrypt -e -k "$CPM_CACHE_FILE" > "$CPM_PASSWORD_DIR/$2"
         else
-            ccrypt -e > "$PASSWORD_STORE_DIR/$2"
+            ccrypt -e > "$CPM_PASSWORD_DIR/$2"
         fi
         ;;
     -h|--help|help)
