@@ -30,6 +30,7 @@ case "$1" in
         [ -e "$CPM_CACHE_FILE" ] && rm "$CPM_CACHE_FILE"
         ;;
     unlock)
+        [ -d "$CPM_CACHE_DIR" ] || mkdir -p "$CPM_CACHE_DIR"
         get_pass > "$CPM_CACHE_FILE"
         ;;
     klock)
@@ -52,12 +53,16 @@ case "$1" in
         fi
         ;;
     insert)
-        [ -d "$CPM_PASSWORD_DIR" ] || mkdir -p "$CPM_PASSWORD_DIR"
-        if [ -r "$CPM_CACHE_FILE" ]; then
-            ccrypt -e -k "$CPM_CACHE_FILE" > "$CPM_PASSWORD_DIR/$2"
-        else
-            ccrypt -e > "$CPM_PASSWORD_DIR/$2"
-        fi
+        PASS_FILE="$CPM_PASSWORD_DIR/$2"
+        DIR=${PASS_FILE%/*}
+        [ -e "$DIR" ] || mkdir -p "$DIR"
+        {
+            if [ -r "$CPM_CACHE_FILE" ]; then
+                ccrypt -e -k "$CPM_CACHE_FILE"
+            else
+                ccrypt -e
+            fi
+        } > "$PASS_FILE"
         ;;
     -h|--help|help)
         usage 0
