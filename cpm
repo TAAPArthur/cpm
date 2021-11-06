@@ -13,12 +13,13 @@ usage() {
 }
 
 get_pass() {
+    mkdir -p "$(dirname "$CPM_CACHE_FILE")"
+    printf "Enter password:" >&2
     if [ -t 0 ]; then
        stty -echo
     fi
-    mkdir -p "$(dirname "$CPM_CACHE_FILE")"
-    printf "Enter password: "
-    cat -
+    read -r PASS
+    printf "%s" "$PASS"
     if [ -t 0 ]; then
         stty echo
     fi
