@@ -52,6 +52,19 @@ case "$1" in
             [ -n "$CPM_TIMEOUT" ] && keyctl timeout "$(keyctl request user "$CPM_MASTER_NAME")" "$CPM_TIMEOUT"
         fi
         ;;
+    smart-show)
+        if [ ! -e "$CPM_PASSWORD_DIR/$2" ]; then
+            for file in "$CPM_PASSWORD_DIR/"*"$2"*; do
+                [ -e "$file" ] && $0 smart-show "${file#$CPM_PASSWORD_DIR/}"
+            done
+        elif [ -d "$CPM_PASSWORD_DIR/$2" ]; then
+            for file in "$CPM_PASSWORD_DIR/$2"/*; do
+                $0 smart-show "${file#$CPM_PASSWORD_DIR/}"
+            done
+        else
+            printf "%s\n%s\n" "${2##*/}" "$($0 show "$2")"
+        fi
+        ;;
     insert)
         PASS_FILE="$CPM_PASSWORD_DIR/$2"
         DIR=${PASS_FILE%/*}
