@@ -41,10 +41,10 @@ case "$1" in
         ;;
     show)
         [ -e "$CPM_PASSWORD_DIR/$2" ] || { echo "$CPM_PASSWORD_DIR/$2 does not exist" >&2; exit 2; }
-        if keyctl request user "$CPM_MASTER_NAME" >/dev/null 2>&1 ; then
-            keyctl pipe "$(keyctl request user "$CPM_MASTER_NAME")" | ccrypt "$CPM_PASSWORD_DIR/$2"
-        elif [ -r "$CPM_CACHE_FILE" ]; then
+        if [ -r "$CPM_CACHE_FILE" ]; then
             ccrypt -c -k "$CPM_CACHE_FILE" "$CPM_PASSWORD_DIR/$2"
+        elif keyctl request user "$CPM_MASTER_NAME" >/dev/null 2>&1 ; then
+            keyctl pipe "$(keyctl request user "$CPM_MASTER_NAME")" | ccrypt -c "$CPM_PASSWORD_DIR/$2"
         else
             PASS=$(get_pass)
             printf "%s" "$PASS" | ccrypt "$CPM_PASSWORD_DIR/$2"
