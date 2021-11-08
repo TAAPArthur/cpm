@@ -50,10 +50,10 @@ case "$1" in
         if [ -r "$CPM_CACHE_FILE" ]; then
             ccrypt -c -k "$CPM_CACHE_FILE" "$CPM_PASSWORD_DIR/$2"
         elif keyctl request user "$CPM_MASTER_NAME" >/dev/null 2>&1 ; then
-            keyctl pipe "$(keyctl request user "$CPM_MASTER_NAME")" | ccrypt -c "$CPM_PASSWORD_DIR/$2"
+            keyctl pipe "$(keyctl request user "$CPM_MASTER_NAME")" | ccrypt -c -k - "$CPM_PASSWORD_DIR/$2"
         else
             PASS=$(get_pass)
-            printf "%s" "$PASS" | ccrypt "$CPM_PASSWORD_DIR/$2"
+            printf "%s" "$PASS" | ccrypt -c -k - "$CPM_PASSWORD_DIR/$2"
             printf "%s" "$PASS" | keyctl padd user "$CPM_MASTER_NAME" @u >/dev/null 2>&1 || true
             [ -n "$CPM_TIMEOUT" ] && keyctl timeout "$(keyctl request user "$CPM_MASTER_NAME")" "$CPM_TIMEOUT"
         fi
