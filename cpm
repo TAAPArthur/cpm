@@ -1,11 +1,12 @@
 #!/bin/sh -e
 
 umask 077
-CPM_PASSWORD_DIR=${CPM_PASSWORD_DIR:-${XDG_DATA_HOME:-$HOME/.locale/share}/cpm}
+CPM_PASSWORD_DIR=${CPM_PASSWORD_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/cpm}
 CPM_MASTER_NAME=${CPM_MASTER_NAME:-default}
 CPM_CACHE_DIR=${PASSWORD_CACHE_FILE:-/tmp/.cpm/$USER/}
 CPM_CACHE_FILE="$CPM_CACHE_DIR/$CPM_MASTER_NAME"
 
+CPM_USE_KEYCTL=${CPM_USE_KEYCTL:-1}
 usage() {
     echo "$0 show name"
     echo "$0 insert name"
@@ -49,13 +50,15 @@ case "$1" in
         [ -e "$CPM_PASSWORD_DIR/$2" ] || { [ "$CPM_QUIET" -eq 1 ] || echo "$CPM_PASSWORD_DIR/$2 does not exist" >&2; exit 2; }
         if [ -r "$CPM_CACHE_FILE" ]; then
             ccrypt -c -k "$CPM_CACHE_FILE" "$CPM_PASSWORD_DIR/$2"
-        elif keyctl request user "$CPM_MASTER_NAME" >/dev/null 2>&1 ; then
+        elif [ "$CPM_USE_KEYCTL" -eq 1 ] && keyctl request user "$CPM_MASTER_NAME" >/dev/null 2>&1 ; then
             keyctl pipe "$(keyctl request user "$CPM_MASTER_NAME")" | ccrypt -c -k - "$CPM_PASSWORD_DIR/$2"
         else
             PASS=$(get_pass)
             printf "%s" "$PASS" | ccrypt -c -k - "$CPM_PASSWORD_DIR/$2"
-            printf "%s" "$PASS" | keyctl padd user "$CPM_MASTER_NAME" @u >/dev/null 2>&1 || true
-            [ -n "$CPM_TIMEOUT" ] && keyctl timeout "$(keyctl request user "$CPM_MASTER_NAME")" "$CPM_TIMEOUT"
+            if [ "$CPM_USE_KEYCTL" -eq 1 ] ; then
+                printf "%s" "$PASS" | keyctl padd user "$CPM_MASTER_NAME" @u >/dev/null 2>&1 || true
+                [ -n "$CPM_TIMEOUT" ] && keyctl timeout "$(keyctl request user "$CPM_MASTER_NAME")" "$CPM_TIMEOUT"
+            fi
         fi
         ;;
     smart-show)
