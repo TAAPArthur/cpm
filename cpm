@@ -74,6 +74,9 @@ case "$1" in
             printf "%s\n%s\n" "${2##*/}" "$($0 show "$2")"
         fi
         ;;
+    replace)
+        [ ! -e "$CPM_PASSWORD_DIR/$2" ] || exec $0 insert "$2"
+        ;;
     insert)
         PASS_FILE="$CPM_PASSWORD_DIR/$2"
         DIR=${PASS_FILE%/*}
